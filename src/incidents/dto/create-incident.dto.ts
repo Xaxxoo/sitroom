@@ -1,6 +1,7 @@
 import { IsEnum, IsString, IsOptional, IsArray, IsUUID, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IncidentType, IncidentSeverity } from '../../common/enums/incident-type.enum';
+import { SanitizeString } from '../../common/transforms/sanitize.transform';
 
 export class CreateIncidentDto {
   @ApiProperty({ enum: IncidentType })
@@ -12,6 +13,7 @@ export class CreateIncidentDto {
   severity: IncidentSeverity;
 
   @ApiProperty()
+  @SanitizeString()
   @IsString()
   @IsNotEmpty()
   description: string;

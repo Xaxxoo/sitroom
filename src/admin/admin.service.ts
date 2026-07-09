@@ -11,6 +11,13 @@ import * as bcrypt from 'bcryptjs';
 const csv = require('csv-parser');
 import { Readable } from 'stream';
 
+function sanitizeCsvField(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, '')
+    .replace(/&[a-zA-Z#0-9]+;/g, '')
+    .trim();
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -55,10 +62,10 @@ export class AdminService {
 
     for (const row of rows) {
       try {
-        const lgaName = (row.lga || row.LGA || '').trim();
-        const wardName = (row.ward || row.Ward || row.WARD || '').trim();
-        const puName = (row.polling_unit || row.pu || row.PU || row['Polling Unit'] || '').trim();
-        const puCode = (row.pu_code || row.code || row.Code || '').trim();
+        const lgaName = sanitizeCsvField(row.lga || row.LGA || '');
+        const wardName = sanitizeCsvField(row.ward || row.Ward || row.WARD || '');
+        const puName = sanitizeCsvField(row.polling_unit || row.pu || row.PU || row['Polling Unit'] || '');
+        const puCode = sanitizeCsvField(row.pu_code || row.code || row.Code || '');
         const registeredVoters = parseInt(row.registered_voters || row.rv || '0') || 0;
 
         if (!lgaName || !wardName || !puName) {

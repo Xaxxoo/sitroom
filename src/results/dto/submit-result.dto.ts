@@ -1,6 +1,7 @@
 import { IsUUID, IsNumber, IsOptional, IsArray, ValidateNested, Min, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { SanitizeString } from '../../common/transforms/sanitize.transform';
 
 export class PartyScoreDto {
   @ApiProperty()
@@ -46,6 +47,7 @@ export class SubmitResultDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @SanitizeString()
   @IsString()
   iNecFormImageUrl?: string;
 }

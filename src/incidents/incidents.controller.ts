@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { IncidentsService } from './incidents.service';
 import { CreateIncidentDto } from './dto/create-incident.dto';
+import { ResolveIncidentDto } from './dto/resolve-incident.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -54,7 +55,7 @@ export class IncidentsController {
 
   @Patch(':id/resolve')
   @Roles(Role.LGA_COORDINATOR, Role.STATE_COORDINATOR, Role.ADMIN)
-  resolve(@Param('id') id: string, @Body('note') note: string, @CurrentUser() user: any) {
-    return this.incidentsService.resolve(id, user, note);
+  resolve(@Param('id') id: string, @Body() dto: ResolveIncidentDto, @CurrentUser() user: any) {
+    return this.incidentsService.resolve(id, user, dto.note);
   }
 }

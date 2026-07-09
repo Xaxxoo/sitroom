@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
+import { BootstrapDto } from './dto/bootstrap.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -18,7 +19,7 @@ export class AdminController {
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('bootstrap')
   @ApiOperation({ summary: 'Create the first admin user — disabled once any user exists' })
-  bootstrap(@Body() dto: { phone: string; name: string; password: string }) {
+  bootstrap(@Body() dto: BootstrapDto) {
     return this.adminService.bootstrapAdmin(dto);
   }
 
