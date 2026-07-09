@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Role } from '../../common/enums/role.enum';
 import { Lga } from '../../geography/entities/lga.entity';
 import { Ward } from '../../geography/entities/ward.entity';
@@ -23,6 +24,7 @@ export class User {
   @Column({ nullable: true })
   name: string;
 
+  @Exclude()
   @Column()
   password: string;
 

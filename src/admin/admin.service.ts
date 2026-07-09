@@ -30,7 +30,7 @@ export class AdminService {
 
   async bootstrapAdmin(dto: { phone: string; name: string; password: string }) {
     const existing = await this.usersService.findAll();
-    if (existing.length > 0) {
+    if (existing.meta.total > 0) {
       throw new ConflictException('Bootstrap is disabled — users already exist');
     }
     const hashed = await bcrypt.hash(dto.password, 10);
@@ -125,7 +125,7 @@ export class AdminService {
 
     // Get admin user (must exist via /admin/bootstrap first)
     const admins = await this.usersService.findAll({ role: Role.ADMIN });
-    const adminUser = admins[0];
+    const adminUser = admins.data[0];
 
     // Geography: 3 LGAs × 3 wards × 3 polling units = 27 PUs
     const geoConfig = [
