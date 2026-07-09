@@ -10,7 +10,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: { origin: process.env.FRONTEND_URL },
   namespace: '/sitroom',
 })
 export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
