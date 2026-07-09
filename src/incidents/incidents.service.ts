@@ -6,6 +6,7 @@ import { CreateIncidentDto } from './dto/create-incident.dto';
 import { IncidentStatus } from '../common/enums/incident-type.enum';
 import { User } from '../users/entities/user.entity';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { paginated } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class IncidentsService {
@@ -28,7 +29,7 @@ export class IncidentsService {
     return loaded;
   }
 
-  async findAll(filters?: { lgaId?: string; wardId?: string; severity?: string; status?: string }) {
+  async findAll(filters?: { lgaId?: string; wardId?: string; severity?: string; status?: string }, page = 1, limit = 20) {
     const qb = this.repo.createQueryBuilder('incident')
       .leftJoinAndSelect('incident.pollingUnit', 'pu')
       .leftJoinAndSelect('incident.ward', 'ward')
@@ -41,7 +42,8 @@ export class IncidentsService {
     if (filters?.severity) qb.andWhere('incident.severity = :severity', { severity: filters.severity });
     if (filters?.status) qb.andWhere('incident.status = :status', { status: filters.status });
 
-    return qb.getMany();
+    const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
+    return paginated(data, total, page, limit);
   }
 
   async findOne(id: string) {

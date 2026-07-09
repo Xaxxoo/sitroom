@@ -8,6 +8,7 @@ import { User } from '../users/entities/user.entity';
 import { SubmitResultDto } from './dto/submit-result.dto';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { Role } from '../common/enums/role.enum';
+import { paginated } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class ResultsService {
@@ -88,7 +89,7 @@ export class ResultsService {
     return result;
   }
 
-  async findAll(filters?: { lgaId?: string; wardId?: string; isAnomalous?: boolean }) {
+  async findAll(filters?: { lgaId?: string; wardId?: string; isAnomalous?: boolean }, page = 1, limit = 20) {
     const qb = this.resultRepo.createQueryBuilder('result')
       .leftJoinAndSelect('result.pollingUnit', 'pu')
       .leftJoinAndSelect('pu.ward', 'ward')
@@ -102,7 +103,8 @@ export class ResultsService {
     if (filters?.wardId) qb.andWhere('ward.id = :wardId', { wardId: filters.wardId });
     if (filters?.isAnomalous !== undefined) qb.andWhere('result.isAnomalous = :isAnomalous', { isAnomalous: filters.isAnomalous });
 
-    return qb.getMany();
+    const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
+    return paginated(data, total, page, limit);
   }
 
   async findOne(id: string) {

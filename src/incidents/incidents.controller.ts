@@ -7,6 +7,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role } from '../common/enums/role.enum';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @ApiTags('incidents')
 @ApiBearerAuth()
@@ -30,8 +31,9 @@ export class IncidentsController {
     @Query('wardId') wardId?: string,
     @Query('severity') severity?: string,
     @Query('status') status?: string,
+    @Query() pagination: PaginationDto = new PaginationDto(),
   ) {
-    return this.incidentsService.findAll({ lgaId, wardId, severity, status });
+    return this.incidentsService.findAll({ lgaId, wardId, severity, status }, pagination.page, pagination.limit);
   }
 
   @Get('stats')

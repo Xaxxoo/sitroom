@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Party } from './entities/party.entity';
+import { paginated } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class PartiesService {
@@ -10,9 +11,15 @@ export class PartiesService {
     private readonly repo: Repository<Party>,
   ) {}
 
-  async findAll(activeOnly = true) {
-    if (activeOnly) return this.repo.find({ where: { isActive: true }, order: { abbreviation: 'ASC' } });
-    return this.repo.find({ order: { abbreviation: 'ASC' } });
+  async findAll(activeOnly = true, page = 1, limit = 20) {
+    const where = activeOnly ? { isActive: true } : {};
+    const [data, total] = await this.repo.findAndCount({
+      where,
+      order: { abbreviation: 'ASC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return paginated(data, total, page, limit);
   }
 
   async findOne(id: string) {

@@ -11,7 +11,7 @@ export class ExportService {
   ) {}
 
   async exportResultsToExcel(filters?: { lgaId?: string; wardId?: string }): Promise<Buffer> {
-    const results = await this.resultsService.findAll(filters);
+    const { data: results } = await this.resultsService.findAll(filters, 1, 10_000);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Sitroom';
@@ -84,7 +84,7 @@ export class ExportService {
   }
 
   async exportIncidentsToExcel(filters?: { lgaId?: string; wardId?: string }): Promise<Buffer> {
-    const incidents = await this.incidentsService.findAll(filters);
+    const { data: incidents } = await this.incidentsService.findAll(filters, 1, 10_000);
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Incidents');

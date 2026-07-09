@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Lga } from './entities/lga.entity';
 import { Ward } from './entities/ward.entity';
 import { PollingUnit } from './entities/polling-unit.entity';
+import { paginated } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class GeographyService {
@@ -13,8 +14,13 @@ export class GeographyService {
     @InjectRepository(PollingUnit) private puRepo: Repository<PollingUnit>,
   ) {}
 
-  async getLgas() {
-    return this.lgaRepo.find({ order: { name: 'ASC' } });
+  async getLgas(page = 1, limit = 20) {
+    const [data, total] = await this.lgaRepo.findAndCount({
+      order: { name: 'ASC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return paginated(data, total, page, limit);
   }
 
   async getLga(id: string) {
@@ -23,10 +29,11 @@ export class GeographyService {
     return lga;
   }
 
-  async getWards(lgaId?: string) {
+  async getWards(lgaId?: string, page = 1, limit = 20) {
     const qb = this.wardRepo.createQueryBuilder('ward').leftJoinAndSelect('ward.lga', 'lga');
     if (lgaId) qb.where('lga.id = :lgaId', { lgaId });
-    return qb.orderBy('ward.name', 'ASC').getMany();
+    const [data, total] = await qb.orderBy('ward.name', 'ASC').skip((page - 1) * limit).take(limit).getManyAndCount();
+    return paginated(data, total, page, limit);
   }
 
   async getWard(id: string) {
@@ -35,7 +42,7 @@ export class GeographyService {
     return ward;
   }
 
-  async getPollingUnits(wardId?: string, lgaId?: string) {
+  async getPollingUnits(wardId?: string, lgaId?: string, page = 1, limit = 20) {
     const qb = this.puRepo.createQueryBuilder('pu')
       .leftJoinAndSelect('pu.ward', 'ward')
       .leftJoinAndSelect('ward.lga', 'lga')
@@ -44,7 +51,8 @@ export class GeographyService {
     if (wardId) qb.where('ward.id = :wardId', { wardId });
     else if (lgaId) qb.where('lga.id = :lgaId', { lgaId });
 
-    return qb.orderBy('pu.name', 'ASC').getMany();
+    const [data, total] = await qb.orderBy('pu.name', 'ASC').skip((page - 1) * limit).take(limit).getManyAndCount();
+    return paginated(data, total, page, limit);
   }
 
   async getPollingUnit(id: string) {

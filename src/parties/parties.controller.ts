@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @ApiTags('parties')
 @ApiBearerAuth()
@@ -14,8 +15,8 @@ export class PartiesController {
   constructor(private readonly partiesService: PartiesService) {}
 
   @Get()
-  findAll(@Query('all') all?: string) {
-    return this.partiesService.findAll(all !== 'true');
+  findAll(@Query('all') all?: string, @Query() pagination: PaginationDto = new PaginationDto()) {
+    return this.partiesService.findAll(all !== 'true', pagination.page, pagination.limit);
   }
 
   @Get(':id')
