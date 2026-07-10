@@ -1,0 +1,37 @@
+{
+  "name": "Sitroom - Election Monitor",
+  "short_name": "Sitroom",
+  "description": "Election Situation Room — real-time result collection and incident reporting",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "government"],
+  "shortcuts": [
+    {
+      "name": "Submit Result",
+      "url": "/results/submit",
+      "description": "Submit polling unit result"
+    },
+    {
+      "name": "Report Incident",
+      "url": "/incidents/new",
+      "description": "Report an election incident"
+    }
+  ]
+}
