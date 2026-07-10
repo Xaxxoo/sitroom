@@ -42,6 +42,10 @@ export class ResultsService {
       anomalyReasons.push('Accredited voters exceed registered voters');
       isAnomalous = true;
     }
+    if (dto.totalVotesCast > dto.accreditedVoters) {
+      anomalyReasons.push('Total votes cast exceed accredited voters');
+      isAnomalous = true;
+    }
     if (dto.totalValidVotes + dto.rejectedBallots !== dto.totalVotesCast) {
       anomalyReasons.push('Valid votes + rejected ballots do not equal total votes cast');
       isAnomalous = true;

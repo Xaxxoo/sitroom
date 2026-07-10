@@ -99,6 +99,18 @@ describe('ResultsService — anomaly detection', () => {
     expect(realtimeGateway.emitAnomaly).toHaveBeenCalledTimes(1);
   });
 
+  it('flags anomaly when total votes cast exceed accredited voters', async () => {
+    const dto = validDto();
+    dto.accreditedVoters = 400; // cast 500 > accredited 400
+    dto.totalVotesCast = 500;
+
+    await service.submit(dto, adminUser);
+
+    expect(createdResult.isAnomalous).toBe(true);
+    expect(createdResult.anomalyReasons).toContain('Total votes cast exceed accredited voters');
+    expect(realtimeGateway.emitAnomaly).toHaveBeenCalledTimes(1);
+  });
+
   it('does not flag the accredited check when registeredVoters is unknown', async () => {
     puRepo.findOne.mockResolvedValue({ ...pollingUnit, registeredVoters: null });
     const dto = validDto();
