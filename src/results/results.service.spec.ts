@@ -14,6 +14,7 @@ import { Role } from '../common/enums/role.enum';
 describe('ResultsService — anomaly detection', () => {
   let service: ResultsService;
   let puRepo: { findOne: jest.Mock };
+  let resultRepo: { findOne: jest.Mock; update: jest.Mock };
   let realtimeGateway: { emitResultSubmitted: jest.Mock; emitAnomaly: jest.Mock };
   let createdResult: any;
 
@@ -60,6 +61,7 @@ describe('ResultsService — anomaly detection', () => {
     };
 
     puRepo = { findOne: jest.fn().mockResolvedValue({ ...pollingUnit }) };
+    resultRepo = { findOne: jest.fn(), update: jest.fn().mockResolvedValue(undefined) };
     realtimeGateway = {
       emitResultSubmitted: jest.fn(),
       emitAnomaly: jest.fn(),
@@ -68,7 +70,7 @@ describe('ResultsService — anomaly detection', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ResultsService,
-        { provide: getRepositoryToken(Result), useValue: {} },
+        { provide: getRepositoryToken(Result), useValue: resultRepo },
         { provide: getRepositoryToken(PartyScore), useValue: {} },
         { provide: getRepositoryToken(PollingUnit), useValue: puRepo },
         { provide: DataSource, useValue: dataSource },
@@ -197,5 +199,52 @@ describe('ResultsService — anomaly detection', () => {
     const agent = { id: 'agent-1', role: Role.AGENT, pollingUnit: { id: 'other-pu' } } as User;
 
     await expect(service.submit(validDto(), agent)).rejects.toThrow(ForbiddenException);
+  });
+
+  describe('flag', () => {
+    it('appends the ballot-stuffing reason when votes cast exceed accredited voters', async () => {
+      resultRepo.findOne.mockResolvedValue({
+        id: 'result-1',
+        accreditedVoters: 400,
+        totalVotesCast: 500, // 500 > 400
+      });
+
+      await service.flag('result-1', ['Manual review requested']);
+
+      const updatePayload = resultRepo.update.mock.calls[0][1];
+      expect(updatePayload.isAnomalous).toBe(true);
+      expect(updatePayload.status).toBe('flagged');
+      expect(updatePayload.anomalyReasons).toEqual([
+        'Manual review requested',
+        'Total votes cast exceed accredited voters',
+      ]);
+      expect(realtimeGateway.emitAnomaly).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not append the ballot-stuffing reason when totals are consistent', async () => {
+      resultRepo.findOne.mockResolvedValue({
+        id: 'result-1',
+        accreditedVoters: 500,
+        totalVotesCast: 500,
+      });
+
+      await service.flag('result-1', ['Manual review requested']);
+
+      const updatePayload = resultRepo.update.mock.calls[0][1];
+      expect(updatePayload.anomalyReasons).toEqual(['Manual review requested']);
+    });
+
+    it('does not duplicate the ballot-stuffing reason if already supplied', async () => {
+      resultRepo.findOne.mockResolvedValue({
+        id: 'result-1',
+        accreditedVoters: 400,
+        totalVotesCast: 500,
+      });
+
+      await service.flag('result-1', ['Total votes cast exceed accredited voters']);
+
+      const updatePayload = resultRepo.update.mock.calls[0][1];
+      expect(updatePayload.anomalyReasons).toEqual(['Total votes cast exceed accredited voters']);
+    });
   });
 });

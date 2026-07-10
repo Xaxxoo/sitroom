@@ -200,10 +200,20 @@ export class ResultsService {
   }
 
   async flag(id: string, reasons: string[]) {
+    const existing = await this.findOne(id);
+
+    const anomalyReasons = [...(reasons || [])];
+    if (
+      existing.totalVotesCast > existing.accreditedVoters &&
+      !anomalyReasons.includes('Total votes cast exceed accredited voters')
+    ) {
+      anomalyReasons.push('Total votes cast exceed accredited voters');
+    }
+
     await this.resultRepo.update(id, {
       status: ResultStatus.FLAGGED,
       isAnomalous: true,
-      anomalyReasons: reasons,
+      anomalyReasons,
     });
     const result = await this.findOne(id);
     this.realtimeGateway.emitAnomaly(result);
