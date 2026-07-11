@@ -20,6 +20,32 @@ export class ResultsService {
     private realtimeGateway: RealtimeGateway,
   ) {}
 
+  private detectAnomalies(input: {
+    accreditedVoters: number;
+    totalVotesCast: number;
+    rejectedBallots: number;
+    totalValidVotes: number;
+    partyVotes: number;
+    registeredVoters?: number | null;
+  }): string[] {
+    const reasons: string[] = [];
+
+    if (input.registeredVoters && input.accreditedVoters > input.registeredVoters) {
+      reasons.push('Accredited voters exceed registered voters');
+    }
+    if (input.totalVotesCast > input.accreditedVoters) {
+      reasons.push('Total votes cast exceed accredited voters');
+    }
+    if (input.totalValidVotes + input.rejectedBallots !== input.totalVotesCast) {
+      reasons.push('Valid votes + rejected ballots do not equal total votes cast');
+    }
+    if (input.partyVotes !== input.totalValidVotes) {
+      reasons.push('Sum of party votes does not match total valid votes');
+    }
+
+    return reasons;
+  }
+
   async submit(dto: SubmitResultDto, submittedBy: User) {
     const pu = await this.puRepo.findOne({
       where: { id: dto.pollingUnitId },
@@ -35,26 +61,15 @@ export class ResultsService {
 
     if (pu.result) throw new ConflictException('Result already submitted for this polling unit. Use update endpoint.');
 
-    const anomalyReasons: string[] = [];
-    let isAnomalous = false;
-
-    if (pu.registeredVoters && dto.accreditedVoters > pu.registeredVoters) {
-      anomalyReasons.push('Accredited voters exceed registered voters');
-      isAnomalous = true;
-    }
-    if (dto.totalVotesCast > dto.accreditedVoters) {
-      anomalyReasons.push('Total votes cast exceed accredited voters');
-      isAnomalous = true;
-    }
-    if (dto.totalValidVotes + dto.rejectedBallots !== dto.totalVotesCast) {
-      anomalyReasons.push('Valid votes + rejected ballots do not equal total votes cast');
-      isAnomalous = true;
-    }
-    const totalPartyVotes = dto.partyScores.reduce((sum, s) => sum + s.votes, 0);
-    if (totalPartyVotes !== dto.totalValidVotes) {
-      anomalyReasons.push('Sum of party votes does not match total valid votes');
-      isAnomalous = true;
-    }
+    const anomalyReasons = this.detectAnomalies({
+      accreditedVoters: dto.accreditedVoters,
+      totalVotesCast: dto.totalVotesCast,
+      rejectedBallots: dto.rejectedBallots,
+      totalValidVotes: dto.totalValidVotes,
+      partyVotes: dto.partyScores.reduce((sum, s) => sum + s.votes, 0),
+      registeredVoters: pu.registeredVoters,
+    });
+    const isAnomalous = anomalyReasons.length > 0;
 
     const result = await this.dataSource.transaction(async (manager) => {
       const newResult = manager.create(Result, {
@@ -202,13 +217,16 @@ export class ResultsService {
   async flag(id: string, reasons: string[]) {
     const existing = await this.findOne(id);
 
-    const anomalyReasons = [...(reasons || [])];
-    if (
-      existing.totalVotesCast > existing.accreditedVoters &&
-      !anomalyReasons.includes('Total votes cast exceed accredited voters')
-    ) {
-      anomalyReasons.push('Total votes cast exceed accredited voters');
-    }
+    const detected = this.detectAnomalies({
+      accreditedVoters: existing.accreditedVoters,
+      totalVotesCast: existing.totalVotesCast,
+      rejectedBallots: existing.rejectedBallots,
+      totalValidVotes: existing.totalValidVotes,
+      partyVotes: existing.partyScores.reduce((sum, s) => sum + s.votes, 0),
+      registeredVoters: existing.pollingUnit?.registeredVoters,
+    });
+
+    const anomalyReasons = [...new Set([...(reasons || []), ...detected])];
 
     await this.resultRepo.update(id, {
       status: ResultStatus.FLAGGED,

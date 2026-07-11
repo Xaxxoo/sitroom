@@ -202,11 +202,21 @@ describe('ResultsService — anomaly detection', () => {
   });
 
   describe('flag', () => {
+    // A stored result with fully consistent totals and a 1000-voter polling unit.
+    const consistentResult = () => ({
+      id: 'result-1',
+      accreditedVoters: 500,
+      totalVotesCast: 500,
+      rejectedBallots: 0,
+      totalValidVotes: 500,
+      partyScores: [{ votes: 500 }],
+      pollingUnit: { registeredVoters: 1000 },
+    });
+
     it('appends the ballot-stuffing reason when votes cast exceed accredited voters', async () => {
       resultRepo.findOne.mockResolvedValue({
-        id: 'result-1',
-        accreditedVoters: 400,
-        totalVotesCast: 500, // 500 > 400
+        ...consistentResult(),
+        accreditedVoters: 400, // cast 500 > accredited 400
       });
 
       await service.flag('result-1', ['Manual review requested']);
@@ -221,12 +231,8 @@ describe('ResultsService — anomaly detection', () => {
       expect(realtimeGateway.emitAnomaly).toHaveBeenCalledTimes(1);
     });
 
-    it('does not append the ballot-stuffing reason when totals are consistent', async () => {
-      resultRepo.findOne.mockResolvedValue({
-        id: 'result-1',
-        accreditedVoters: 500,
-        totalVotesCast: 500,
-      });
+    it('does not append any detected reason when stored totals are consistent', async () => {
+      resultRepo.findOne.mockResolvedValue(consistentResult());
 
       await service.flag('result-1', ['Manual review requested']);
 
@@ -234,17 +240,35 @@ describe('ResultsService — anomaly detection', () => {
       expect(updatePayload.anomalyReasons).toEqual(['Manual review requested']);
     });
 
-    it('does not duplicate the ballot-stuffing reason if already supplied', async () => {
+    it('does not duplicate a detected reason that was also supplied manually', async () => {
       resultRepo.findOne.mockResolvedValue({
-        id: 'result-1',
+        ...consistentResult(),
         accreditedVoters: 400,
-        totalVotesCast: 500,
       });
 
       await service.flag('result-1', ['Total votes cast exceed accredited voters']);
 
       const updatePayload = resultRepo.update.mock.calls[0][1];
       expect(updatePayload.anomalyReasons).toEqual(['Total votes cast exceed accredited voters']);
+    });
+
+    it('runs the full anomaly suite against stored totals when flagging', async () => {
+      resultRepo.findOne.mockResolvedValue({
+        id: 'result-1',
+        accreditedVoters: 500,
+        totalVotesCast: 500,
+        rejectedBallots: 20, // 480 + 20 == 500 ok
+        totalValidVotes: 480,
+        partyScores: [{ votes: 100 }], // 100 != 480 valid
+        pollingUnit: { registeredVoters: 1000 },
+      });
+
+      await service.flag('result-1', []);
+
+      const updatePayload = resultRepo.update.mock.calls[0][1];
+      expect(updatePayload.anomalyReasons).toEqual([
+        'Sum of party votes does not match total valid votes',
+      ]);
     });
   });
 });
