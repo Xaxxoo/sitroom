@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Result, ResultStatus } from './entities/result.entity';
@@ -227,6 +227,10 @@ export class ResultsService {
     });
 
     const anomalyReasons = [...new Set([...(reasons || []), ...detected])];
+
+    if (anomalyReasons.length === 0) {
+      throw new BadRequestException('At least one reason is required to flag a result');
+    }
 
     await this.resultRepo.update(id, {
       status: ResultStatus.FLAGGED,

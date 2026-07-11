@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { Result } from './entities/result.entity';
 import { PartyScore } from './entities/party-score.entity';
@@ -250,6 +250,14 @@ describe('ResultsService — anomaly detection', () => {
 
       const updatePayload = resultRepo.update.mock.calls[0][1];
       expect(updatePayload.anomalyReasons).toEqual(['Total votes cast exceed accredited voters']);
+    });
+
+    it('rejects flagging with no manual reasons and no detected anomalies', async () => {
+      resultRepo.findOne.mockResolvedValue(consistentResult());
+
+      await expect(service.flag('result-1', [])).rejects.toThrow(BadRequestException);
+      expect(resultRepo.update).not.toHaveBeenCalled();
+      expect(realtimeGateway.emitAnomaly).not.toHaveBeenCalled();
     });
 
     it('runs the full anomaly suite against stored totals when flagging', async () => {
